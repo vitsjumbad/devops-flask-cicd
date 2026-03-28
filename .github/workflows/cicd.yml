@@ -26,19 +26,26 @@ jobs:
       - name: Push Docker image
         run: |
           docker push ${{ secrets.DOCKER_USERNAME }}/devops-flask-app:latest
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
       
       - name: Deploy to EC2 via SSM
         run: |
           aws ssm send-command \
             --region ${{ secrets.AWS_REGION }} \
             --document-name "AWS-RunShellScript" \
-            --targets "Key=tag:Name,Values=devops-flask" \
-            --parameters 'commands=[
-              "sudo docker pull ${{ secrets.DOCKER_USERNAME }}/devops-flask-app:latest",
-              "sudo docker stop $(sudo docker ps -q) || true",
-              "sudo docker rm $(sudo docker ps -aq) || true",
-              "sudo docker run -d -p 80:5000 ${{ secrets.DOCKER_USERNAME }}/devops-flask-app:latest"
-            ]'
+            --targets Key=tag:Name,Values=devops-flask \
+            --parameters commands="[
+              \"sudo docker pull ${{ secrets.DOCKER_USERNAME }}/devops-flask-app:latest\",
+              \"sudo docker stop \$(sudo docker ps -q) || true\",
+              \"sudo docker rm \$(sudo docker ps -aq) || true\",
+              \"sudo docker run -d -p 80:5000 ${{ secrets.DOCKER_USERNAME }}/devops-flask-app:latest\"
+            ]"
 
 
             
